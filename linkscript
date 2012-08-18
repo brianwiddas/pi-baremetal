@@ -1,0 +1,27 @@
+/* Linker script for kernel */
+
+/* Define the memory as starting at 0x8000, and being a megabyte long
+ * (shouldn't need to be more than this)
+ */
+
+MEMORY
+{
+	kernel : org = 0x8000, len = 1M
+}
+
+/* Output kernel code (.text) and data (.bss) into kernel address space
+ *
+ * Make sure start.o comes first, so the entry point is at the start of the
+ * file
+ *
+ * Puts .bss in the middle to force the final binary kernel to contain it;
+ * this means it will be set to 0 rather than left to whatever is in the
+ * memory beforehand. This isn't very efficient.
+ */
+
+SECTIONS
+{
+	.text : { start.o(.text) *(.text*) } >kernel
+	.bss : { *(.bss) } >kernel
+	.data : { *(.data) } >kernel
+}
