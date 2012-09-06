@@ -1,11 +1,73 @@
 Raspberry Pi bare metal experiments
 ===================================
 
-Sets up GPIO16 (OK LED, active low) as an output, and GPIO 14 as an
-input, with a pull-up resistor. Loops round copying the state of GPIO14
-to GPIO16. Bringing GPIO14 low will light up the OK LED; this can be done
-by shorting it to the GND - connect pins 6 and 8 on the I/O connector.
+Building
+--------
 
-This isn't really a good idea, for all sorts of reasons (for example,
-if GPIO 14 is accidentally set to output high), but it suffices for a
-quick test.
+The code is known to build on Linux Mint 12 using the arm-linux-gnueabihf
+versions of the gcc compiler chain (apt-get install arm-linux-gnueabihf-gcc).
+This is the same version which exists on the Raspbian distribution, so the
+code should also be buildable on a Raspberry Pi.
+
+To build, type "make". make will build a list of dependencies (in make.dep)
+by examining each of the .c files, then build the object files before
+linking them into kernel.elf, and turning that into a binary version
+(kernel.img).
+
+kernel.img can be copied onto an SD card. The usual Videocore firmware files
+are also needed (start.elf, bootcode.bin, loader.bin, config.txt, and
+optionally cmdline.txt). As the kernel takes up minimal space and has no
+filesystem requirement, almost any old SD card will do
+
+Code overview
+-------------
+
+The kernel is loaded into 0x8000 and starts running from that location, at
+_start in start.s, which sets up a stack and calls main().
+
+main() initialises the led (GPIO16) and framebuffer. If the framebuffer
+initialisation fails for any reason, an error code is flashed on the LED in
+a permanent loop (long pause, 2 short flashes in quick succession, then 8
+bits. Short flash = 0, long flash = 1. Least significant bit first. See
+framebuffer.h for the meaning of the errors).
+
+The framebuffer is initialised using tag mailbox calls to VideoCore. First,
+a call is made to read the framebuffer size, then a call is made to set the
+size and depth (bits per pixel) and allocate a framebuffer. It appears to be
+necessary to set the size before allocating the framebuffer, but reading the
+size of the framebuffer returns an apparently sensible value (unless
+something silly has been set in config.txt) which can be used to set the
+size.
+
+A very basic text console has been added. This uses the SAA5050 teletext
+character set (taken from the datasheet:
+http://www-uxsup.csx.cam.ac.uk/~bjh21/BBCdata/SAA5050.pdf), partly because
+it looks quite nice and is a neat link to the BBC Micro, and partly because
+I already have the data from another project.
+
+The SAA5050 character set isn't totally ideal.  The # [ { ^ } ] ` _ | and \
+characters appear as other symbols (pound sign, left arrow, 1/4, up arrow,
+3/4, 1/2, long dash, #, double vertical line and right arrow, respectively).
+
+Having set up the framebuffer, the kernel then gets various bits of data
+from Videocore to display on the screen.
+
+Finally, it goes in to a loop where it reads GPIO 14 (which has been
+configured as an input, with a pull-up resistor) and copies the state to
+GPIO16.
+
+Bringing GPIO14 low will light up the OK LED; this can be done by shorting
+it to the GND - connect pins 6 and 8 on the I/O connector. This isn't really
+a good idea, for all sorts of reasons (for example, if GPIO 14 is
+accidentally set to output high), but it suffices for a quick test.
+
+Files overview:
+	* start.s		Assembler to handle kernel entry point, set
+				up stack and jump to main(). Also, memory
+				barriers/cache control
+	* main.c		Contains main() and tag mailbox examples
+	* led.c			GPIO/OK LED control
+	* framebuffer.c		Framebuffer initialisation and text console
+	* teletext.h		SAA5050 character set
+	* textutils.c		Couple of small routines to convert numbers
+				into text
