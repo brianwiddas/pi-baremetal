@@ -1,0 +1,11 @@
+Raspberry Pi bare metal experiments
+===================================
+
+Sets up GPIO16 (OK LED, active low) as an output, and GPIO 14 as an
+input, with a pull-up resistor. Loops round copying the state of GPIO14
+to GPIO16. Bringing GPIO14 low will light up the OK LED; this can be done
+by shorting it to the GND - connect pins 6 and 8 on the I/O connector.
+
+This isn't really a good idea, for all sorts of reasons (for example,
+if GPIO 14 is accidentally set to output high), but it suffices for a
+quick test.
