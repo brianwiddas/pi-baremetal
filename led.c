@@ -1,3 +1,5 @@
+#include "led.h"
+#include "start.h"
 
 /* Addresses of ARM GPIO devices
  * See BCM2835 peripherals guide
@@ -20,7 +22,7 @@ static void delay(void)
 		asm ("mov r0, r0");	/* No-op */
 }
 
-void main(void)
+void led_init(void)
 {
 	unsigned int var;
 
@@ -55,12 +57,17 @@ void main(void)
 	*gpioGPPUD = 0;
 	*gpioPUDCLK0 = 0;
 	*gpioPUDCLK1 = 0;
+}
+
+void led_gpio14(void)
+{
+	unsigned int var;
 
 	/* Loop round reading GPIO14 and setting GPIO16 to match
 	 * As the GPIO14 is pulled high and the LED on GPIO16 is
 	 * active low, the LED is normally off until GPIO14 is shorted
 	 * to ground (such as the convenient ground pin next to it
-	 * on the IDC header
+	 * on the IDC header)
 	 */
 	while(1)
 	{
@@ -71,4 +78,67 @@ void main(void)
 		else
 			*gpioGPCLR0 = 1<<16;
 	}
+}
+
+
+/* Shortish delay loop */
+static void shortdelay(void)
+{
+	unsigned int timer = 3000000;
+
+	while(timer--)
+		asm("mov r0, r0");	/* No-op */
+}
+/* Massively long delay loop */
+static void longdelay(void)
+{
+	unsigned int timer = 10000000;
+
+	while(timer--)
+		asm("mov r0, r0");	/* No-op */
+}
+
+static void output_n(unsigned int num, unsigned int count)
+{
+
+	longdelay();
+	longdelay();
+	longdelay();
+	longdelay();
+
+	/* Flash quickly to indicate start */
+	*gpioGPCLR0 = 1<<16;
+	shortdelay();
+	*gpioGPSET0 = 1<<16;
+	shortdelay();
+	*gpioGPCLR0 = 1<<16;
+	shortdelay();
+	*gpioGPSET0 = 1<<16;
+	longdelay();
+	longdelay();
+
+	while(count--)
+	{
+		*gpioGPCLR0 = 1<<16;
+
+		if(num & 1)
+			longdelay();
+		else
+			shortdelay();
+
+		*gpioGPSET0 = 1<<16;
+		longdelay();
+			
+		num = num >> 1;
+	}
+}
+
+void output32(unsigned int num)
+{
+	output_n(num, 32);
+}
+
+void output(unsigned int num)
+{
+	output_n(num, 8);
 }
