@@ -47,7 +47,7 @@ I already have the data from another project.
 
 The SAA5050 character set isn't totally ideal.  The # [ { ^ } ] ` _ | and \
 characters appear as other symbols (pound sign, left arrow, 1/4, up arrow,
-3/4, 1/2, long dash, #, double vertical line and right arrow, respectively).
+3/4, right arrow, long dash, #, double vertical line and 1/2, respectively).
 
 Having set up the framebuffer, the kernel then gets various bits of data
 from Videocore to display on the screen.
