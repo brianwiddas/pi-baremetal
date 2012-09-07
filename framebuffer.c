@@ -34,7 +34,7 @@
 
 /* Screen parameters set in fb_init() */
 static unsigned int screenbase, screensize;
-static unsigned int fb_x, fb_y;
+static unsigned int fb_x, fb_y, pitch;
 /* Max x/y character cell */
 static unsigned int max_x, max_y;
 
@@ -145,6 +145,22 @@ void fb_init(void)
 	if(screenbase == 0 || screensize == 0)
 		fb_fail(FBFAIL_INVALID_TAG_DATA);
 
+	/* Get the framebuffer pitch (bytes per line) */
+	mailbuffer[0] = 7 * 4;		// Total size
+	mailbuffer[1] = 0;		// Request
+	mailbuffer[2] = 0x40008;	// Display size
+	mailbuffer[3] = 4;		// Buffer size
+	mailbuffer[4] = 0;		// Request size
+	mailbuffer[5] = 0;		// Space for pitch
+	mailbuffer[6] = 0;		// End tag
+
+	writemailbox(8, (unsigned int)mailbuffer);
+
+	var = readmailbox(8);
+
+	/* Need error checking */
+	pitch = mailbuffer[5];
+
 	/* Need to set up max_x/max_y before using console_write */
 	max_x = fb_x / CHARSIZE_X;
 	max_y = fb_y / CHARSIZE_Y;
@@ -250,7 +266,7 @@ void console_write(char *text)
 
 		for(row=0; row<10; row++)
 		{
-			addr = ((row+consy*10)*1280 + consx*6)*2;
+			addr = (row+consy*10)*pitch + consx*6*2;
 
 			for(col=4; col>=0; col--)
 			{
