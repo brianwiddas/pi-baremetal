@@ -67,6 +67,7 @@ Files overview:
 				barriers/cache control
 	* main.c		Contains main() and tag mailbox examples
 	* led.c			GPIO/OK LED control
+	* mailbox.c		Read/write the mailboxes
 	* framebuffer.c		Framebuffer initialisation and text console
 	* teletext.h		SAA5050 character set
 	* textutils.c		Couple of small routines to convert numbers

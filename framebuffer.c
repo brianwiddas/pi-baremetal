@@ -250,7 +250,12 @@ void console_write(char *text)
 
 		for(row=0; row<10; row++)
 		{
-			addr = ((row+consy*10)*1280 + consx*6)*2;
+			/* Should be using the framebuffer pitch rather than
+			 * fb_x, but that will need more VideoCore querying.
+			 * Screen will look odd if the width isn't a multiple
+			 * of 8 pixels
+			 */
+			addr = ((row+consy*10)*fb_x + consx*6)*2;
 
 			for(col=4; col>=0; col--)
 			{
