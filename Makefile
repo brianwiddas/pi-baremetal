@@ -1,10 +1,13 @@
 
 # These values are should work for any Linux where the arm-linux-gnueabihf gcc
 # suite is installed, including Raspbian
-CC=arm-linux-gnueabihf-gcc
-LD=arm-linux-gnueabihf-ld
-AS=arm-linux-gnueabihf-as
-OBJCOPY=arm-linux-gnueabihf-objcopy
+#
+# If they don't, you'll need to manually add the paths for gcc, ld, as and
+# objcopy
+CC:=arm-linux-gnueabihf-gcc
+LD:=$(shell $(CC) -print-prog-name=ld)
+AS:=$(shell $(CC) -print-prog-name=as)
+OBJCOPY:=$(shell $(CC) -print-prog-name=objcopy)
 
 # -mcpu=arm1176jzf-s will cause the assembler to error on ARM opcodes which are
 # not valid for that specific processor
