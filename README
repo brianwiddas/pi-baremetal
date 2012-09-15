@@ -5,9 +5,10 @@ Building
 --------
 
 The code is known to build on Linux Mint 12 using the arm-linux-gnueabihf
-versions of the gcc compiler chain (apt-get install arm-linux-gnueabihf-gcc).
-This is the same version which exists on the Raspbian distribution, so the
-code should also be buildable on a Raspberry Pi.
+versions of the gcc compiler chain (apt-get install
+arm-linux-gnueabihf-gcc).  This is the same version which exists on the
+Raspbian "Wheezy" distribution, and the code is known to build on the
+Rasperry Pi.
 
 To build, type "make". make will build a list of dependencies (in make.dep)
 by examining each of the .c files, then build the object files before
@@ -18,6 +19,20 @@ kernel.img can be copied onto an SD card. The usual Videocore firmware files
 are also needed (start.elf, bootcode.bin, loader.bin, config.txt, and
 optionally cmdline.txt). As the kernel takes up minimal space and has no
 filesystem requirement, almost any old SD card will do
+
+
+IF YOU'RE NOT BUILDING ON A RASPBERRY PI, there is a copy of libgcc.a from
+gcc 4.6 from the Raspberry Pi in rpi-libgcc. Make will use this by default.
+If you know the libgcc.a on your compiler is ok (ie, it only contains ARMv6
+instructions), you can run set "LOCALLIBGCC=1" in the Makefile, or run "make
+LOCALLIBGCC=1" instead of "make".
+
+When building on a Raspberry Pi (specifically, any device with a processor
+type of "BCM2708", make will use the libgcc.a which comes with gcc).
+
+In both cases, you can override the libgcc filename by running
+"make LIBGCC=[filename]". However, the default make will probably work just
+fine.
 
 Code overview
 -------------
@@ -62,6 +77,10 @@ a good idea, for all sorts of reasons (for example, if GPIO 14 is
 accidentally set to output high), but it suffices for a quick test.
 
 Files overview:
+	* Makefile		Controls the build process
+	* linkscript		Controls the linker - defines what order
+				code appears in the final kernel, and what
+				address it should expect to be loaded
 	* start.s		Assembler to handle kernel entry point, set
 				up stack and jump to main(). Also, memory
 				barriers/cache control
@@ -72,3 +91,8 @@ Files overview:
 	* teletext.h		SAA5050 character set
 	* textutils.c		Couple of small routines to convert numbers
 				into text
+	* divby0.c		If a division function in libgcc.a (which
+				might be called by a divide operation
+				somewhere in the code) attempts to divide by
+				zero, the function will call raise(), which
+				is defined in this file

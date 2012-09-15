@@ -1,5 +1,10 @@
 /* Linker script for kernel */
 
+/* Define the kernel entry point. Needed to prevent ld's -gc-sections option
+ * getting rid of everything
+ */
+ENTRY(_start)
+
 /* Define the memory as starting at 0x8000, and being a megabyte long
  * (shouldn't need to be more than this)
  */

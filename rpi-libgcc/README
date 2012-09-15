@@ -1,0 +1,9 @@
+libgcc.a for Raspberry Pi
+=========================
+
+The libgcc.a file in this directory is taken from gcc in the Raspbian Wheezy
+distribution and in subject to the GPL, version 3, with the runtime
+exception (see the files COPYING3 and COPYING.RUNTIME).
+
+A copy of the source code can be found at
+https://github.com/mirrors/gcc/tree/master/libgcc

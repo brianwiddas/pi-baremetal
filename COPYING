@@ -1,0 +1,10 @@
+Licence
+=======
+
+(such as it is)
+
+This code is me experimenting with bare-metal programming on the Raspberry
+Pi. I hope it's useful. Please feel free to pinch bits if so.
+
+This file is mostly here to separate my code from the GPLv3-licensed
+libgcc.a (see rpi-libgcc/COPYING3) for that.
