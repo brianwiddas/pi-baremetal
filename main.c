@@ -1,7 +1,7 @@
 #include "led.h"
+#include "barrier.h"
 #include "framebuffer.h"
 #include "mailbox.h"
-#include "start.h"
 #include "textutils.h"
 
 /* Use some free memory in the area below the kernel/stack */

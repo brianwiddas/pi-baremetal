@@ -7,8 +7,7 @@ Building
 The code is known to build on Linux Mint 12 using the arm-linux-gnueabihf
 versions of the gcc compiler chain (apt-get install
 arm-linux-gnueabihf-gcc).  This is the same version which exists on the
-Raspbian "Wheezy" distribution, and the code is known to build on the
-Rasperry Pi.
+Raspbian "Wheezy" distribution, and the code builds on the Rasperry Pi.
 
 To build, type "make". make will build a list of dependencies (in make.dep)
 by examining each of the .c files, then build the object files before
@@ -28,7 +27,7 @@ instructions), you can run set "LOCALLIBGCC=1" in the Makefile, or run "make
 LOCALLIBGCC=1" instead of "make".
 
 When building on a Raspberry Pi (specifically, any device with a processor
-type of "BCM2708", make will use the libgcc.a which comes with gcc).
+type of "BCM2708"), make will use the libgcc.a which comes with gcc.
 
 In both cases, you can override the libgcc filename by running
 "make LIBGCC=[filename]". However, the default make will probably work just
@@ -84,6 +83,8 @@ Files overview:
 	* start.s		Assembler to handle kernel entry point, set
 				up stack and jump to main(). Also, memory
 				barriers/cache control
+	* barrier.h		Contains asm macros for data memory/sync
+				barriers, and full cache flush
 	* main.c		Contains main() and tag mailbox examples
 	* led.c			GPIO/OK LED control
 	* mailbox.c		Read/write the mailboxes

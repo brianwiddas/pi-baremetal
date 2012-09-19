@@ -1,5 +1,4 @@
 #include "led.h"
-#include "start.h"
 
 /* Addresses of ARM GPIO devices
  * See BCM2835 peripherals guide

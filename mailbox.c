@@ -2,7 +2,7 @@
  * Access system mailboxes
  */
 #include "mailbox.h"
-#include "start.h"
+#include "barrier.h"
 
 /* Mailbox memory addresses */
 static volatile unsigned int *MAILBOX0READ = (unsigned int *) 0x2000b880;

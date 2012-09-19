@@ -1,7 +1,7 @@
 #include "framebuffer.h"
+#include "barrier.h"
 #include "led.h"
 #include "mailbox.h"
-#include "start.h"
 #include "textutils.h"
 
 /* SAA5050 (teletext) character definitions */
