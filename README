@@ -14,16 +14,11 @@ by examining each of the .c files, then build the object files before
 linking them into kernel.elf, and turning that into a binary version
 (kernel.img).
 
-kernel.img can be copied onto an SD card. The usual Videocore firmware files
-are also needed (start.elf, bootcode.bin, loader.bin, config.txt, and
-optionally cmdline.txt). As the kernel takes up minimal space and has no
-filesystem requirement, almost any old SD card will do
-
 
 IF YOU'RE NOT BUILDING ON A RASPBERRY PI, there is a copy of libgcc.a from
 gcc 4.6 from the Raspberry Pi in rpi-libgcc. Make will use this by default.
 If you know the libgcc.a on your compiler is ok (ie, it only contains ARMv6
-instructions), you can run set "LOCALLIBGCC=1" in the Makefile, or run "make
+instructions), you can set "LOCALLIBGCC=1" in the Makefile, or run "make
 LOCALLIBGCC=1" instead of "make".
 
 When building on a Raspberry Pi (specifically, any device with a processor
@@ -33,25 +28,49 @@ In both cases, you can override the libgcc filename by running
 "make LIBGCC=[filename]". However, the default make will probably work just
 fine.
 
+
+Installing
+----------
+
+kernel.img should be copied onto an SD card. The usual Videocore firmware
+files are also needed (start.elf, bootcode.bin, loader.bin and config.txt).
+Optionally, cmdline.txt can be used to set the kernel command line. At the
+moment, this is just displayed on the screen rather then being used for
+anything.
+
+As the kernel takes up minimal space and has no filesystem requirement,
+almost any old SD card will do
+
+A recent firmware version is required. If the kernel doesn't boot, try the
+latest firmware files from
+https://github.com/raspberrypi/firmware/tree/master/boot
+
+
 Code overview
 -------------
 
-The kernel is loaded into 0x8000 and starts running from that location, at
-_start in start.s, which sets up a stack and calls main().
+The kernel is loaded into memory at 0x8000 and starts running from that
+location, at _start in start.s, which sets up a stack and calls main().
 
 main() initialises the led (GPIO16) and framebuffer. If the framebuffer
 initialisation fails for any reason, an error code is flashed on the LED in
 a permanent loop (long pause, 2 short flashes in quick succession, then 8
 bits. Short flash = 0, long flash = 1. Least significant bit first. See
-framebuffer.h for the meaning of the errors).
+framebuffer.c for the meaning of the errors).
 
 The framebuffer is initialised using tag mailbox calls to VideoCore. First,
-a call is made to read the framebuffer size, then a call is made to set the
-size and depth (bits per pixel) and allocate a framebuffer. It appears to be
-necessary to set the size before allocating the framebuffer, but reading the
-size of the framebuffer returns an apparently sensible value (unless
-something silly has been set in config.txt) which can be used to set the
-size.
+a call is made to read the physical framebuffer size, then a call is made to
+set the size (physical and virtual) and depth (bits per pixel) and allocate
+a framebuffer. Finally, the framebuffer's pitch (bytes per pixel line) is
+read.
+
+It appears to be necessary to set the virtual size before allocating the
+framebuffer, but reading the physical size of the framebuffer returns an
+apparently sensible value (unless something silly has been set in
+config.txt). On boot, the virtual size is set to 2x2. If a framebuffer is
+allocated without reconfiguring the virtual size, the screen will consist of
+four very large virtual pixels.  Coloured red, green, yellow and blue, they
+produce the "rainbow" startup screen.
 
 A very basic text console has been added. This uses the SAA5050 teletext
 character set (taken from the datasheet:
@@ -63,8 +82,20 @@ The SAA5050 character set isn't totally ideal.  The # [ { ^ } ] ` _ | and \
 characters appear as other symbols (pound sign, left arrow, 1/4, up arrow,
 3/4, right arrow, long dash, #, double vertical line and 1/2, respectively).
 
-Having set up the framebuffer, the kernel then gets various bits of data
-from Videocore to display on the screen.
+Having set up the framebuffer, the kernel then reads the ATAGs data set up
+by the bootloader and displays it on screen. The ATAGs format is documented
+here:
+http://www.simtec.co.uk/products/SWLINUX/files/booting_article.html#d0e428
+
+The ATAGs code will display most of the tags defined on that page, even
+where they are not obviously relevant to the Raspberry Pi. In practice, it
+seems the bootloader only sets up a handful of tags. It is possible to
+configure the bootloader to not set up ATAGs (disable_commandline_tags=1 in
+config.txt), but doing so will change the kernel's load address, and it will
+no longer work.
+
+Next, the kernel uses the tag mailbox to get various bits of data from
+Videocore to display on the screen.
 
 Finally, it goes in to a loop where it reads GPIO 14 (which has been
 configured as an input, with a pull-up resistor) and copies the state to
@@ -80,12 +111,12 @@ Files overview:
 	* linkscript		Controls the linker - defines what order
 				code appears in the final kernel, and what
 				address it should expect to be loaded
-	* start.s		Assembler to handle kernel entry point, set
-				up stack and jump to main(). Also, memory
-				barriers/cache control
+	* start.s		Assembly code to handle kernel entry point,
+				set up a stack and jump to main().
 	* barrier.h		Contains asm macros for data memory/sync
 				barriers, and full cache flush
 	* main.c		Contains main() and tag mailbox examples
+	* atags.c		Read and display ATAGs
 	* led.c			GPIO/OK LED control
 	* mailbox.c		Read/write the mailboxes
 	* framebuffer.c		Framebuffer initialisation and text console

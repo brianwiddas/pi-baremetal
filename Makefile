@@ -53,7 +53,7 @@ ASOPT=--warn -mcpu=arm1176jzf-s
 CCOPT=-Wall -O6 -nostdinc -ffreestanding -marm -mcpu=arm1176jzf-s
 
 # Object files built from C
-COBJS=divby0.o led.o framebuffer.o mailbox.o main.o textutils.o
+COBJS=atags.o divby0.o led.o framebuffer.o mailbox.o main.o textutils.o
 
 all: make.dep kernel.img
 

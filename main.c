@@ -1,4 +1,5 @@
 #include "led.h"
+#include "atags.h"
 #include "barrier.h"
 #include "framebuffer.h"
 #include "mailbox.h"
@@ -15,6 +16,8 @@ void mailboxtest(void)
 	volatile unsigned int *ptr = (unsigned int *) BUFFER_ADDRESS;
 	unsigned int count, var;
 	unsigned int mem, size;
+
+	console_write(BG_GREEN BG_HALF "Reading from tag mailbox\n\n" BG_BLACK);
 
 	ptr[0] = 8 * 4;		// Total size
 	ptr[1] = 0;		// Request
@@ -143,8 +146,15 @@ void mailboxtest(void)
 	console_write(" megabytes)" COLOUR_POP "\n");
 }
 
-/* Main routine - called directly from start.s */
-void main(void)
+/* Main routine - called directly from start.s
+ * ARM procedure call standard says the first 3 parameters of a function
+ * are r0, r1, r2. These registers are untouched by _start, so will be
+ * exactly as the bootloader set them
+ * r0 should be 0
+ * r1 should be the machine type - 0x0c42 = Raspberry Pi
+ * r2 should be the ATAGs structure address (probably 0x100)
+ */
+void main(unsigned int r0, unsigned int machtype, unsigned int atagsaddr)
 {
 	led_init();
 	fb_init();
@@ -152,10 +162,21 @@ void main(void)
 	/* Say hello */
 	console_write("Pi-Baremetal booted\n\n");
 
+	console_write(FG_RED "Machine type is 0x");
+	console_write(tohex(machtype, 4));
+
+	if(machtype == 0xc42)
+		console_write(", a Broadcom BCM2708 (Raspberry Pi)\n\n" FG_WHITE);
+	else
+		console_write(". Unknown machine type. Good luck!\n\n" FG_WHITE);
+
+	/* Read in ATAGS */
+	print_atags(atagsaddr);
+	
 	/* Read in some system data */
 	mailboxtest();
 
-	console_write(FG_GREEN "\nOK LED reflects state of !GPIO14");
+	console_write(BG_GREEN BG_HALF "\nOK LED reflects state of !GPIO14");
 
 	/* Make the LED do something in a never-ending while loop */
 	led_gpio14();
