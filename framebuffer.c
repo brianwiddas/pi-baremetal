@@ -22,8 +22,12 @@
 #define FBFAIL_INVALID_TAGS		4
 /* Setup FB call returned an invalid response for the framebuffer tag */
 #define FBFAIL_INVALID_TAG_RESPONSE	5
-/* Setup FB call returned an invalid addrss/size */
+/* Setup FB call returned an invalid address/size */
 #define FBFAIL_INVALID_TAG_DATA		6
+/* Read FB pitch call returned an invalid response */
+#define FBFAIL_INVALID_PITCH_RESPONSE	7
+/* Read FB pitch call returned an invalid pitch value */
+#define FBFAIL_INVALID_PITCH_DATA	8
 
 /* Character cells are 6x10 */
 #define CHARSIZE_X	6
@@ -158,8 +162,13 @@ void fb_init(void)
 
 	var = readmailbox(8);
 
-	/* Need error checking */
+	/* 4 bytes, plus MSB set to indicate a response */
+	if(mailbuffer[4] != 0x80000004)
+		fb_fail(FBFAIL_INVALID_PITCH_RESPONSE);
+
 	pitch = mailbuffer[5];
+	if(pitch == 0)
+		fb_fail(FBFAIL_INVALID_PITCH_DATA);
 
 	/* Need to set up max_x/max_y before using console_write */
 	max_x = fb_x / CHARSIZE_X;
