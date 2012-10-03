@@ -22,8 +22,12 @@
 #define FBFAIL_INVALID_TAGS		4
 /* Setup FB call returned an invalid response for the framebuffer tag */
 #define FBFAIL_INVALID_TAG_RESPONSE	5
-/* Setup FB call returned an invalid addrss/size */
+/* Setup FB call returned an invalid address/size */
 #define FBFAIL_INVALID_TAG_DATA		6
+/* Read FB pitch call returned an invalid response */
+#define FBFAIL_INVALID_PITCH_RESPONSE	7
+/* Read FB pitch call returned an invalid pitch value */
+#define FBFAIL_INVALID_PITCH_DATA	8
 
 /* Character cells are 6x10 */
 #define CHARSIZE_X	6
@@ -34,7 +38,7 @@
 
 /* Screen parameters set in fb_init() */
 static unsigned int screenbase, screensize;
-static unsigned int fb_x, fb_y;
+static unsigned int fb_x, fb_y, pitch;
 /* Max x/y character cell */
 static unsigned int max_x, max_y;
 
@@ -145,6 +149,27 @@ void fb_init(void)
 	if(screenbase == 0 || screensize == 0)
 		fb_fail(FBFAIL_INVALID_TAG_DATA);
 
+	/* Get the framebuffer pitch (bytes per line) */
+	mailbuffer[0] = 7 * 4;		// Total size
+	mailbuffer[1] = 0;		// Request
+	mailbuffer[2] = 0x40008;	// Display size
+	mailbuffer[3] = 4;		// Buffer size
+	mailbuffer[4] = 0;		// Request size
+	mailbuffer[5] = 0;		// Space for pitch
+	mailbuffer[6] = 0;		// End tag
+
+	writemailbox(8, (unsigned int)mailbuffer);
+
+	var = readmailbox(8);
+
+	/* 4 bytes, plus MSB set to indicate a response */
+	if(mailbuffer[4] != 0x80000004)
+		fb_fail(FBFAIL_INVALID_PITCH_RESPONSE);
+
+	pitch = mailbuffer[5];
+	if(pitch == 0)
+		fb_fail(FBFAIL_INVALID_PITCH_DATA);
+
 	/* Need to set up max_x/max_y before using console_write */
 	max_x = fb_x / CHARSIZE_X;
 	max_y = fb_y / CHARSIZE_Y;
@@ -250,12 +275,7 @@ void console_write(char *text)
 
 		for(row=0; row<10; row++)
 		{
-			/* Should be using the framebuffer pitch rather than
-			 * fb_x, but that will need more VideoCore querying.
-			 * Screen will look odd if the width isn't a multiple
-			 * of 8 pixels
-			 */
-			addr = ((row+consy*10)*fb_x + consx*6)*2;
+			addr = (row+consy*10)*pitch + consx*6*2;
 
 			for(col=4; col>=0; col--)
 			{

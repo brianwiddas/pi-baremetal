@@ -55,6 +55,24 @@ void mailboxtest(void)
 	console_write(todec(ptr[6], 0));
 	console_write(COLOUR_POP "\n");
 
+	ptr[0] = 8 * 4;		// Total size
+	ptr[1] = 0;		// Request
+
+	ptr[2] = 0x40008;	// Display size
+	ptr[3] = 8;		// Buffer size
+	ptr[4] = 0;		// Request size
+	ptr[5] = 0;
+	ptr[6] = 0;
+
+	ptr[7] = 0;
+
+	writemailbox(8, BUFFER_ADDRESS);
+
+	var = readmailbox(8);
+
+	console_write(COLOUR_PUSH FG_CYAN "Pitch: " BG_WHITE BG_HALF BG_HALF);
+	console_write(todec(ptr[5], 0));
+	console_write(" bytes" COLOUR_POP "\n");
 
 	ptr[0] = 200 * 4;	// Total size
 	ptr[1] = 0;		// Request
