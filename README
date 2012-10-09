@@ -50,7 +50,8 @@ Code overview
 -------------
 
 The kernel is loaded into memory at 0x8000 and starts running from that
-location, at _start in start.s, which sets up a stack and calls main().
+location, at _start in start.s, which sets up a stack, turns on unaligned
+memory accesses (it makes the memory routines simpler) and calls main().
 
 main() initialises the led (GPIO16) and framebuffer. If the framebuffer
 initialisation fails for any reason, an error code is flashed on the LED in
@@ -123,6 +124,7 @@ Files overview:
 	* teletext.h		SAA5050 character set
 	* textutils.c		Couple of small routines to convert numbers
 				into text
+	* memutils.c		Routines to copy and clear memory areas
 	* divby0.c		If a division function in libgcc.a (which
 				might be called by a divide operation
 				somewhere in the code) attempts to divide by

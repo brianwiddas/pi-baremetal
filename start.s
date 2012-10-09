@@ -7,4 +7,11 @@ _start:
 	 * stack
 	 */
 	mov sp, #0x8000
+
+	/* Turn on unaligned memory access */
+	mrc p15, #0, r4, c1, c0, #0
+	orr r4, #0x400000	/* 1<22 */
+	mcr p15, #0, r4, c1, c0, #0
+
 	b main
+

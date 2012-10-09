@@ -2,6 +2,7 @@
 #include "barrier.h"
 #include "led.h"
 #include "mailbox.h"
+#include "memutils.h"
 #include "textutils.h"
 
 /* SAA5050 (teletext) character definitions */
@@ -200,6 +201,25 @@ static unsigned short int bgcolour = 0;
 static unsigned int colour_stack[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 static unsigned int colour_sp = 8;
 
+/* Scroll the framebuffer 1 character row upwards, discarding the top row */
+static void fb_vscroll(void)
+{
+	unsigned int source;
+	/* Number of bytes in a character row */
+	register unsigned int rowbytes = CHARSIZE_Y * pitch;
+
+	/* Copy a screen's worth of data (minus 1 character row) from the
+	 * second row to the first
+	 */
+
+	/* Calculate the address to copy the screen data from */
+	source = screenbase + rowbytes;
+	memmove((void *)screenbase, (void *)source, (max_y-1)*rowbytes);
+
+	/* Clear last line on screen */
+	memclr((void *)(screenbase + (max_y-1)*rowbytes), rowbytes);
+}
+
 /* Write null-terminated text to the console
  * Supports control characters (see framebuffer.h) for colour and newline
  */
@@ -273,17 +293,24 @@ void console_write(char *text)
 				ch-=32;
 		}
 
-		for(row=0; row<10; row++)
+		/* Plot character onto screen
+		 *
+		 * CHARSIZE_Y and CHARSIZE_X are the size of the block the
+		 * character occupies. The character itself is one pixel
+		 * smaller in each direction, and is located in the upper left
+		 * of the block
+		 */
+		for(row=0; row<CHARSIZE_Y; row++)
 		{
-			addr = (row+consy*10)*pitch + consx*6*2;
+			addr = (row+consy*CHARSIZE_Y)*pitch + consx*CHARSIZE_X*2;
 
-			for(col=4; col>=0; col--)
+			for(col=(CHARSIZE_X-2); col>=0; col--)
 			{
 				ptr = (unsigned short int *)(screenbase+addr);
 
 				addr+=2;
 
-				if(row<9 && (teletext[ch][row] & (1<<col)))
+				if(row<(CHARSIZE_Y-1) && (teletext[ch][row] & (1<<col)))
 					*ptr = fgcolour;
 				else
 					*ptr = bgcolour;
@@ -296,12 +323,13 @@ void console_write(char *text)
 		if(++consx >=max_x)
 		{
 			consx = 0;
-			consy++;
+			if(consy<(max_y-1))
+				consy++;
+			else
+				/* Reached the bottom of the screen so scroll
+				 * up
+				 */
+				fb_vscroll();
 		}
-		/* Doesn't currently handle the situation where y>=max_y.
-		 * If this happens, the ARM will overwrite non-framebuffer
-		 * GPU memory. Not sure what that will do, but it's
-		 * probably a bad idea
-		 */
 	}
 }
