@@ -61,7 +61,8 @@ void *memmove(void *dest, const void *src, unsigned int length)
 	if(!length)
 		return dest;
 
-	/* Assume the memory blocks are word aligned. Most will be, and the		 * CPU can deal with unaligned accesses if necessary (as long as it
+	/* Assume the memory blocks are word aligned. Most will be, and the
+	 * CPU can deal with unaligned accesses if necessary (as long as it
 	 * is configured to do so)
 	 */
 	if(d>s && d<(s+length))
