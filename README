@@ -33,7 +33,7 @@ Installing
 ----------
 
 kernel.img should be copied onto an SD card. The usual Videocore firmware
-files are also needed (start.elf, bootcode.bin, loader.bin and config.txt).
+files are also needed (start.elf, bootcode.bin, fixup.dat and config.txt).
 Optionally, cmdline.txt can be used to set the kernel command line. At the
 moment, this is just displayed on the screen rather then being used for
 anything.
