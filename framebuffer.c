@@ -201,12 +201,21 @@ static unsigned short int bgcolour = 0;
 static unsigned int colour_stack[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 static unsigned int colour_sp = 8;
 
-/* Scroll the framebuffer 1 character row upwards, discarding the top row */
-static void fb_vscroll(void)
+/* Move to a new line, and, if at the bottom of the screen, scroll the
+ * framebuffer 1 character row upwards, discarding the top row
+ */
+static void newline()
 {
 	unsigned int source;
 	/* Number of bytes in a character row */
 	register unsigned int rowbytes = CHARSIZE_Y * pitch;
+
+	consx = 0;
+	if(consy<(max_y-1))
+	{
+		consy++;
+		return;
+	}
 
 	/* Copy a screen's worth of data (minus 1 character row) from the
 	 * second row to the first
@@ -251,7 +260,7 @@ void console_write(char *text)
 			case 8: fgcolour = 0b0000000000000000; continue;
 				/* Half brightness */
 			case 9: fgcolour = (fgcolour >> 1) & 0b0111101111101111; continue;
-			case 10: consx=0; consy++; continue;
+			case 10: newline(); continue;
 			case 11: /* Colour stack push */
 				if(colour_sp)
 					colour_sp--;
@@ -322,14 +331,7 @@ void console_write(char *text)
 
 		if(++consx >=max_x)
 		{
-			consx = 0;
-			if(consy<(max_y-1))
-				consy++;
-			else
-				/* Reached the bottom of the screen so scroll
-				 * up
-				 */
-				fb_vscroll();
+			newline();
 		}
 	}
 }
