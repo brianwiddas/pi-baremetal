@@ -98,14 +98,13 @@ no longer work.
 Next, the kernel uses the tag mailbox to get various bits of data from
 Videocore to display on the screen.
 
-Finally, it goes in to a loop where it reads GPIO 14 (which has been
-configured as an input, with a pull-up resistor) and copies the state to
-GPIO16.
-
-Bringing GPIO14 low will light up the OK LED; this can be done by shorting
-it to the GND - connect pins 6 and 8 on the I/O connector. This isn't really
-a good idea, for all sorts of reasons (for example, if GPIO 14 is
-accidentally set to output high), but it suffices for a quick test.
+The kernel then sets up interrupt vectors and enables the ARM timer
+interrupt. This interrupt is used to flash the OK LED. It also enables the
+MMU, which is configured to map every virtual address to its corresponding
+physical address, except 0x00100000-0x001ffff and 0x00200000-0x002fffff,
+which are swapped over, and 0x02000000-0x03ffffff, which are unmapped. This
+is then tested with some reads/writes to the affected areas, and an attempt
+to jump to 0x02100000, which resuts in a prefetch abort.
 
 Files overview:
 	* Makefile		Controls the build process
@@ -130,3 +129,7 @@ Files overview:
 				somewhere in the code) attempts to divide by
 				zero, the function will call raise(), which
 				is defined in this file
+	* interrupts.c		Interrupt handling routines
+	* intvec.s		Interrupt vector code which is copied to
+				0x00000000
+	* memory.c		Memory management
