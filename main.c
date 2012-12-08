@@ -4,6 +4,7 @@
 #include "framebuffer.h"
 #include "interrupts.h"
 #include "mailbox.h"
+#include "memory.h"
 #include "memutils.h"
 #include "textutils.h"
 
@@ -148,6 +149,9 @@ void mailboxtest(void)
 	console_write(" megabytes)" COLOUR_POP "\n");
 }
 
+/* Call non-existent code at 33MB - should cause a prefetch abort */
+static void(*deliberate_prefetch_abort)(void) = (void(*)(void))0x02100000;
+
 /* Main routine - called directly from start.s
  * ARM procedure call standard says the first 3 parameters of a function
  * are r0, r1, r2. These registers are untouched by _start, so will be
@@ -161,6 +165,8 @@ void main(unsigned int r0, unsigned int machtype, unsigned int atagsaddr)
 	led_init();
 	fb_init();
 	interrupts_init();
+
+	volatile unsigned int *memory;
 
 	/* Say hello */
 	console_write("Pi-Baremetal booted\n\n");
@@ -183,7 +189,61 @@ void main(unsigned int r0, unsigned int machtype, unsigned int atagsaddr)
 	console_write("\nTest SWI: ");
 	asm volatile("swi #1234");
 
-	console_write(BG_GREEN BG_HALF "\nOK LED flashing");
+	console_write(FG_YELLOW "\nMMU tests - writing data to memory\n" FG_CYAN);
+	memory = (unsigned int *)0x00100000;
+	*memory = 0xdeadbeef;
+	console_write("0x00100000 = 0x");
+	console_write(tohex(*memory, 4));
+	console_write("\n");
+
+	memory = (unsigned int *)0x00200000;
+	*memory = 0xf00dcafe;
+	console_write("0x00200000 = 0x");
+	console_write(tohex(*memory, 4));
+	console_write("\n");
+
+	/* Write to 32MB */
+	memory = (unsigned int *)0x02000000;
+	*memory = 0xc0ffee;
+	console_write("0x02000000 = 0x");
+	console_write(tohex(*memory, 4));
+	console_write("\n");
+
+	mem_init();
+	console_write(FG_RED "MMU on - "
+		"0x00100000 and 0x00200000 swapped, 0x02000000 unmapped\n"
+		FG_YELLOW "Reading data from memory\n" FG_CYAN);
+
+	memory = (unsigned int *)0x00100000;
+	console_write("0x00100000 = 0x");
+	console_write(tohex(*memory, 4));
+	console_write("\n");
+
+	memory = (unsigned int *)0x00200000;
+	console_write("0x00200000 = 0x");
+	console_write(tohex(*memory, 4));
+	console_write("\n");
+	/* Read from 32MB - should abort */
+	memory = (unsigned int *)0x02000000;
+	console_write("0x02000000 = 0x");
+	console_write(tohex(*memory, 4));
+	console_write("\n");
+
+	console_write(FG_WHITE BG_GREEN BG_HALF "\nOK LED flashing under interrupt");
+
+	console_write(BG_BLACK FG_YELLOW
+		"\n\nPerforming deliberate prefetch abort: "
+		FG_RED BG_RED BG_HALF);
+	deliberate_prefetch_abort();
+
+	/* Prefetch abort doesn't return, so it won't get past this point */
+
+	while(1);
+}
+
+void main_endloop(void)
+{
+	console_write(FG_WHITE BG_GREEN BG_HALF "\nPrefetch abort done");
 
 	while(1);
 }

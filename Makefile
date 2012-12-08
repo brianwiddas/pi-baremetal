@@ -54,7 +54,7 @@ CCOPT=-Wall -O6 -nostdinc -ffreestanding -marm -mcpu=arm1176jzf-s
 
 # Object files built from C
 COBJS=atags.o divby0.o led.o framebuffer.o interrupts.o mailbox.o main.o \
-	memutils.o textutils.o
+	memory.o memutils.o textutils.o
 
 # Object files build from assembler
 ASOBJS=start.o intvec.o

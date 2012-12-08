@@ -42,16 +42,22 @@ __attribute__ ((interrupt ("IRQ"))) void interrupt_irq(void)
 
 __attribute__ ((interrupt ("ABORT"))) void interrupt_data_abort(void)
 {
-	register unsigned int addr;
+	register unsigned int addr, far;
 	asm volatile("mov %[addr], lr" : [addr] "=r" (addr) );
+	/* Read fault address register */
+	asm volatile("mrc p15, 0, %[addr], c6, c0, 0": [addr] "=r" (far) );
+
 
 	console_write("Data abort!\n");
-	console_write("Instuction address: 0x");
+	console_write("Instruction address: 0x");
 	/* addr = lr, but the very start of the abort routine does
 	 * sub lr, lr, #4
 	 * lr = address of aborted instruction, plus 8
 	 */
 	console_write(tohex(addr-4, 4));
+
+	console_write("  fault address: 0x");
+	console_write(tohex(far, 4));
 	console_write("\n");
 
 	/* Routine terminates by returning to LR-4, which is the instruction
@@ -61,13 +67,16 @@ __attribute__ ((interrupt ("ABORT"))) void interrupt_data_abort(void)
 	 */
 }
 
+/* Return to this function after a prefetch abort */
+extern void main_endloop(void);
+
 __attribute__ ((interrupt ("ABORT"))) void interrupt_prefetch_abort(void)
 {
 	register unsigned int addr;
 	asm volatile("mov %[addr], lr" : [addr] "=r" (addr) );
 
 	console_write("Prefetch abort!\n");
-	console_write("Instuction address: 0x");
+	console_write("Instruction address: 0x");
 	/* lr = address of aborted instruction, plus 4
 	 * addr = lr, but the very start of the abort routine does
 	 * sub lr, lr, #4
@@ -75,8 +84,17 @@ __attribute__ ((interrupt ("ABORT"))) void interrupt_prefetch_abort(void)
 	console_write(tohex(addr, 4));
 	console_write("\n");
 
-	/* Don't attempt to return */
-	while(1);
+	/* Set the return address to be the function main_endloop(), by
+	 * putting its address into the program counter
+	 *
+	 * THIS IS JUST A TEST - you can't normally do this as it doesn't
+	 * restore the registers or put the stack pointer back where it was,
+	 * so repeated aborts will overflow the stack.
+	 */
+	asm volatile("movs pc, %[addr]" : :
+		[addr] "r" ((unsigned int)(&main_endloop)) );
+
+	/* Doesn't reach this point */
 
 	/* Routine terminates by returning to LR-4, which is the instruction
 	 * after the aborted one
