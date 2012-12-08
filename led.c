@@ -58,25 +58,16 @@ void led_init(void)
 	*gpioPUDCLK1 = 0;
 }
 
-void led_gpio14(void)
+static unsigned int led_status = 0;
+
+void led_invert(void)
 {
-	unsigned int var;
+	led_status = !led_status;
 
-	/* Loop round reading GPIO14 and setting GPIO16 to match
-	 * As the GPIO14 is pulled high and the LED on GPIO16 is
-	 * active low, the LED is normally off until GPIO14 is shorted
-	 * to ground (such as the convenient ground pin next to it
-	 * on the IDC header)
-	 */
-	while(1)
-	{
-		var = *gpioGPLEV0;
-
-		if(var & (1<<14))
-			*gpioGPSET0 = 1<<16;
-		else
-			*gpioGPCLR0 = 1<<16;
-	}
+	if(led_status)
+		*gpioGPCLR0 = 1<<16;	/* on */
+	else
+		*gpioGPSET0 = 1<<16;	/* off */
 }
 
 

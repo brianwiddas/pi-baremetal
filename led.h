@@ -2,7 +2,7 @@
 #define LED_H
 
 void led_init(void);
-void led_gpio14(void);
+void led_invert(void);
 void output32(unsigned int num);
 void output(unsigned int num);
 

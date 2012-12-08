@@ -53,8 +53,11 @@ ASOPT=--warn -mcpu=arm1176jzf-s
 CCOPT=-Wall -O6 -nostdinc -ffreestanding -marm -mcpu=arm1176jzf-s
 
 # Object files built from C
-COBJS=atags.o divby0.o led.o framebuffer.o mailbox.o main.o \
+COBJS=atags.o divby0.o led.o framebuffer.o interrupts.o mailbox.o main.o \
 	memutils.o textutils.o
+
+# Object files build from assembler
+ASOBJS=start.o intvec.o
 
 all: make.dep kernel.img
 
@@ -71,16 +74,19 @@ make.dep: *.c *.h
 # to sit around for the next build
 .DELETE_ON_ERROR: make.dep
 
-# Build the assembler bit
+# Build the assembler bits
 start.o: start.s
-	$(AS) $(ASOPT) -o start.o start.s
+intvec.o: intvec.s
+
+$(ASOBJS):
+	$(AS) $(ASOPT) -o $@ $<
 
 # Make an ELF kernel which loads at 0x8000 (RPi default) from all the object
 # files
-kernel.elf: linkscript start.o $(COBJS)
+kernel.elf: linkscript $(ASOBJS) $(COBJS)
 	$(LD) -T linkscript -nostdlib -nostartfiles -gc-sections \
 		-o kernel.elf \
-		start.o $(COBJS) $(LIBGCC)
+		$(ASOBJS) $(COBJS) $(LIBGCC)
 
 # Turn the ELF kernel into a binary file. This could be combined with the
 # step above, but it's easier to disassemble the ELF version to see why

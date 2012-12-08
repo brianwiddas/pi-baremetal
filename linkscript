@@ -12,12 +12,17 @@ ENTRY(_start)
 MEMORY
 {
 	kernel : org = 0x8000, len = 1M
+	vectors : org = 0, len = 0x1000
 }
 
-/* Output kernel code (.text) and data (.bss) into kernel address space
+/* Output kernel code (.text) and data (.data, .rodata, .bss) into kernel
+ * address space, along with the interrupt vector code in the intvec section
  *
  * Make sure start.o comes first, so the entry point is at the start of the
  * file
+ *
+ * intvec needs to be linked so it is located in the same memory as the rest
+ * of the kernel and data, but can be copied to 0x00000000 and run from there
  *
  * Puts .bss in the middle to force the final binary kernel to contain it;
  * this means it will be set to 0 rather than left to whatever is in the
@@ -27,6 +32,9 @@ MEMORY
 SECTIONS
 {
 	.text : { start.o(.text) *(.text*) } >kernel
+	_intvec = . ;
+	intvec : AT(_intvec) { intvec.o(intvec) } >vectors
+	.rodata (_intvec + SIZEOF(intvec)) : { *(.rodata) } >kernel
 	.bss : { *(.bss) } >kernel
 	.data : { *(.data) } >kernel
 }

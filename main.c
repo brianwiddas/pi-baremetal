@@ -2,7 +2,9 @@
 #include "atags.h"
 #include "barrier.h"
 #include "framebuffer.h"
+#include "interrupts.h"
 #include "mailbox.h"
+#include "memutils.h"
 #include "textutils.h"
 
 /* Use some free memory in the area below the kernel/stack */
@@ -158,6 +160,7 @@ void main(unsigned int r0, unsigned int machtype, unsigned int atagsaddr)
 {
 	led_init();
 	fb_init();
+	interrupts_init();
 
 	/* Say hello */
 	console_write("Pi-Baremetal booted\n\n");
@@ -176,8 +179,11 @@ void main(unsigned int r0, unsigned int machtype, unsigned int atagsaddr)
 	/* Read in some system data */
 	mailboxtest();
 
-	console_write(BG_GREEN BG_HALF "\nOK LED reflects state of !GPIO14");
+	/* Test interrupt */
+	console_write("\nTest SWI: ");
+	asm volatile("swi #1234");
 
-	/* Make the LED do something in a never-ending while loop */
-	led_gpio14();
+	console_write(BG_GREEN BG_HALF "\nOK LED flashing");
+
+	while(1);
 }
