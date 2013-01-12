@@ -88,6 +88,16 @@ void fb_init(void)
 	fb_x = mailbuffer[5];
 	fb_y = mailbuffer[6];
 
+	/* If both fb_x and fb_y are both zero, assume we're running on the
+	 * qemu Raspberry Pi emulation (which doesn't return a screen size
+	 * at this point), and request a 640x480 screen
+	 */
+	if(fb_x==0 && fb_y==0)
+	{
+		fb_x = 640;
+		fb_y = 480;
+	}
+
 	if(fb_x==0 || fb_y==0)
 		fb_fail(FBFAIL_GOT_INVALID_RESOLUTION);
 
