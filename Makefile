@@ -53,11 +53,11 @@ ASOPT=--warn -mcpu=arm1176jzf-s
 CCOPT=-Wall -O6 -nostdinc -ffreestanding -marm -mcpu=arm1176jzf-s
 
 # Object files built from C
-COBJS=atags.o divby0.o led.o framebuffer.o interrupts.o mailbox.o main.o \
-	memory.o memutils.o textutils.o
+COBJS=atags.o divby0.o framebuffer.o initsys.o interrupts.o led.o mailbox.o \
+	main.o memory.o memutils.o textutils.o
 
 # Object files build from assembler
-ASOBJS=start.o intvec.o
+ASOBJS=start.o
 
 all: make.dep kernel.img
 
@@ -76,7 +76,6 @@ make.dep: *.c *.h
 
 # Build the assembler bits
 start.o: start.s
-intvec.o: intvec.s
 
 $(ASOBJS):
 	$(AS) $(ASOPT) -o $@ $<

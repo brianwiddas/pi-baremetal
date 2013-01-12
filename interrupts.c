@@ -2,17 +2,45 @@
 
 #include "framebuffer.h"
 #include "led.h"
-#include "memutils.h"
+#include "memory.h"
 #include "textutils.h"
 
-volatile unsigned int *irqEnable1= (unsigned int *) 0x2000b210;
-volatile unsigned int *irqEnable2= (unsigned int *) 0x2000b214;
-volatile unsigned int *irqEnableBasic= (unsigned int *) 0x2000b218;
+static volatile unsigned int *irqEnable1 = (unsigned int *) mem_p2v(0x2000b210);
+static volatile unsigned int *irqEnable2 = (unsigned int *) mem_p2v(0x2000b214);
+static volatile unsigned int *irqEnableBasic = (unsigned int *) mem_p2v(0x2000b218);
 
-volatile unsigned int *armTimerLoad = (unsigned int *) 0x2000b400;
-volatile unsigned int *armTimerValue = (unsigned int *) 0x2000b404;
-volatile unsigned int *armTimerControl = (unsigned int *) 0x2000b408;
-volatile unsigned int *armTimerIRQClear = (unsigned int *) 0x2000b40c;
+static volatile unsigned int *armTimerLoad = (unsigned int *) mem_p2v(0x2000b400);
+static volatile unsigned int *armTimerValue = (unsigned int *) mem_p2v(0x2000b404);
+static volatile unsigned int *armTimerControl = (unsigned int *) mem_p2v(0x2000b408);
+static volatile unsigned int *armTimerIRQClear = (unsigned int *) mem_p2v(0x2000b40c);
+
+/* Interrupt vectors called by the CPU. Needs to be aligned to 32 bits as the
+ * bottom 5 bits of the vector address as set in the control coprocessor must
+ * be zero
+ *
+ * The RESET vector is set to bad_exception. On CPU reset the interrupt vectors
+ * are set back to 0x00000000, so it won't be used. Any attempt to call this
+ * vector is clearly an error. Also, resetting the Pi will reset VideoCore,
+ * and reboot.
+ */
+__attribute__ ((naked, aligned(32))) static void interrupt_vectors(void)
+{
+	asm volatile("b bad_exception\n"	/* RESET */
+		"b bad_exception\n"	/* UNDEF */
+		"b interrupt_swi\n"
+		"b interrupt_prefetch_abort \n"
+		"b interrupt_data_abort \n"
+		"b bad_exception;\n"	/* Unused vector */
+		"b interrupt_irq \n"
+		"b bad_exception\n"	/* FIQ */
+	);
+}
+
+/* Unhandled exceptions - hang the machine */
+__attribute__ ((naked)) void bad_exception(void)
+{
+	while(1);
+}
 
 __attribute__ ((interrupt ("SWI"))) void interrupt_swi(void)
 {
@@ -34,6 +62,7 @@ __attribute__ ((interrupt ("SWI"))) void interrupt_swi(void)
 	console_write(COLOUR_POP "\n");
 }
 
+/* IRQs flash the OK LED */
 __attribute__ ((interrupt ("IRQ"))) void interrupt_irq(void)
 {
 	*armTimerIRQClear = 0;
@@ -95,34 +124,16 @@ __attribute__ ((interrupt ("ABORT"))) void interrupt_prefetch_abort(void)
 		[addr] "r" ((unsigned int)(&main_endloop)) );
 
 	/* Doesn't reach this point */
-
-	/* Routine terminates by returning to LR-4, which is the instruction
-	 * after the aborted one
-	 */
 }
 
-/* These variable locations are defined by the linker
- *
- * _interrupt_start	where in memory the interrupt vectors should go
- *			(0x00000000, or 0xffff0000 with the right settings)
- * _interrupt_end	address of the word after the interrupt vector code
- * _intvec		location in memory of the compiled interrupt vector
- *			table
- */
-extern void *_interrupt_start, *_intvec, *_interrupt_end;
-
-/* Initialise the interrupts table by copying the interrupt vectors into the
- * right place
+/* Initialise the interrupts
  *
  * Enable the ARM timer interrupt
  */
 void interrupts_init(void)
 {
-	/* Copy vectors into place */
-	memmove(&_interrupt_start, &_intvec,
-		(unsigned int)&_interrupt_end -
-		(unsigned int)&_interrupt_start);
-
+	/* Set interrupt base register */
+	asm volatile("mcr p15, 0, %[addr], c12, c0, 0" : : [addr] "r" (&interrupt_vectors));
 	/* Turn on interrupts */
 	asm volatile("cpsie i");
 

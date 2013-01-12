@@ -1,16 +1,17 @@
 #include "led.h"
+#include "memory.h"
 
-/* Addresses of ARM GPIO devices
+/* Addresses of ARM GPIO devices (with conversion to virtual addresses)
  * See BCM2835 peripherals guide
  */
-volatile unsigned int *gpioGPFSEL1 = (unsigned int *) 0x20200004;
-volatile unsigned int *gpioGPSET0 = (unsigned int *) 0x2020001c;
-volatile unsigned int *gpioGPCLR0 = (unsigned int *) 0x20200028;
-volatile unsigned int *gpioGPLEV0 = (unsigned int *) 0x20200034;
+static volatile unsigned int *gpioGPFSEL1 = (unsigned int *) mem_p2v(0x20200004);
+static volatile unsigned int *gpioGPSET0 = (unsigned int *) mem_p2v(0x2020001c);
+static volatile unsigned int *gpioGPCLR0 = (unsigned int *) mem_p2v(0x20200028);
+static volatile unsigned int *gpioGPLEV0 = (unsigned int *) mem_p2v(0x20200034);
 
-volatile unsigned int *gpioGPPUD = (unsigned int *) 0x20200094;
-volatile unsigned int *gpioPUDCLK0 = (unsigned int *) 0x20200098;
-volatile unsigned int *gpioPUDCLK1 = (unsigned int *) 0x2020009c;
+static volatile unsigned int *gpioGPPUD = (unsigned int *) mem_p2v(0x20200094);
+static volatile unsigned int *gpioPUDCLK0 = (unsigned int *) mem_p2v(0x20200098);
+static volatile unsigned int *gpioPUDCLK1 = (unsigned int *) mem_p2v(0x2020009c);
 
 /* Short delay loop */
 static void delay(void)

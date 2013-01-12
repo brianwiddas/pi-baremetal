@@ -2,6 +2,7 @@
 #include "barrier.h"
 #include "led.h"
 #include "mailbox.h"
+#include "memory.h"
 #include "memutils.h"
 #include "textutils.h"
 
@@ -34,9 +35,6 @@
 #define CHARSIZE_X	6
 #define CHARSIZE_Y	10
 
-/* Use some free memory in the area below the kernel/stack */
-#define BUFFER_ADDRESS	0x1000
-
 /* Screen parameters set in fb_init() */
 static unsigned int screenbase, screensize;
 static unsigned int fb_x, fb_y, pitch;
@@ -52,11 +50,22 @@ static void fb_fail(unsigned int num)
 		output(num);
 }
 
+/* Initialise the framebuffer */
 void fb_init(void)
 {
 	unsigned int var;
 	unsigned int count;
-	volatile unsigned int *mailbuffer = (unsigned int *) BUFFER_ADDRESS;
+	unsigned int physical_screenbase;
+
+	/* Storage space for the buffer used to pass information between the
+	 * CPU and VideoCore
+	 * Needs to be aligned to 16 bytes as the bottom 4 bits of the address
+	 * passed to VideoCore are used for the mailbox number
+	 */
+	volatile unsigned int mailbuffer[256] __attribute__((aligned (16)));
+
+	/* Physical memory address of the mailbuffer, for passing to VC */
+	unsigned int physical_mb = mem_v2p((unsigned int)mailbuffer);
 
 	/* Get the display size */
 	mailbuffer[0] = 8 * 4;		// Total size
@@ -68,7 +77,7 @@ void fb_init(void)
 	mailbuffer[6] = 0;		// Space for vertical resolution
 	mailbuffer[7] = 0;		// End tag
 
-	writemailbox(8, (unsigned int)mailbuffer);
+	writemailbox(8, physical_mb);
 
 	var = readmailbox(8);
 
@@ -115,7 +124,7 @@ void fb_init(void)
 
 	mailbuffer[0] = c*4;		// Buffer size
 
-	writemailbox(8, (unsigned int)mailbuffer);
+	writemailbox(8, physical_mb);
 
 	var = readmailbox(8);
 
@@ -144,11 +153,16 @@ void fb_init(void)
 		fb_fail(FBFAIL_INVALID_TAG_RESPONSE);
 
 	/* Framebuffer address/size in response */
-	screenbase = mailbuffer[count+3];
+	physical_screenbase = mailbuffer[count+3];
 	screensize = mailbuffer[count+4];
 
-	if(screenbase == 0 || screensize == 0)
+	if(physical_screenbase == 0 || screensize == 0)
 		fb_fail(FBFAIL_INVALID_TAG_DATA);
+
+	/* physical_screenbase is the address of the screen in RAM
+	 * screenbase needs to be the screen address in virtual memory
+	 */
+	screenbase=mem_p2v(physical_screenbase);
 
 	/* Get the framebuffer pitch (bytes per line) */
 	mailbuffer[0] = 7 * 4;		// Total size
@@ -159,7 +173,7 @@ void fb_init(void)
 	mailbuffer[5] = 0;		// Space for pitch
 	mailbuffer[6] = 0;		// End tag
 
-	writemailbox(8, (unsigned int)mailbuffer);
+	writemailbox(8, physical_mb);
 
 	var = readmailbox(8);
 
@@ -177,8 +191,10 @@ void fb_init(void)
 
 	console_write(COLOUR_PUSH BG_BLUE BG_HALF FG_CYAN
 			"Framebuffer initialised. Address = 0x");
+	console_write(tohex(physical_screenbase, sizeof(physical_screenbase)));
+	console_write(" (physical), 0x");
 	console_write(tohex(screenbase, sizeof(screenbase)));
-	console_write(", size = 0x");
+	console_write(" (virtual), size = 0x");
 	console_write(tohex(screensize, sizeof(screensize)));
 	console_write(", resolution = ");
 	console_write(todec(fb_x, 0));

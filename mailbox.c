@@ -2,12 +2,14 @@
  * Access system mailboxes
  */
 #include "mailbox.h"
+
 #include "barrier.h"
+#include "memory.h"
 
 /* Mailbox memory addresses */
-static volatile unsigned int *MAILBOX0READ = (unsigned int *) 0x2000b880;
-static volatile unsigned int *MAILBOX0STATUS = (unsigned int *) 0x2000b898;
-static volatile unsigned int *MAILBOX0WRITE = (unsigned int *) 0x2000b8a0;
+static volatile unsigned int *MAILBOX0READ = (unsigned int *) mem_p2v(0x2000b880);
+static volatile unsigned int *MAILBOX0STATUS = (unsigned int *) mem_p2v(0x2000b898);
+static volatile unsigned int *MAILBOX0WRITE = (unsigned int *) mem_p2v(0x2000b8a0);
 
 /* Bit 31 set in status register if the write mailbox is full */
 #define MAILBOX_FULL 0x80000000

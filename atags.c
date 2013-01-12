@@ -1,6 +1,7 @@
 #include "atags.h"
 
 #include "framebuffer.h"
+#include "memory.h"
 #include "textutils.h"
 
 static void print_atag_core(struct atag_core *data)
@@ -118,7 +119,8 @@ static void print_atag_cmdline(struct atag_cmdline *data)
 
 void print_atags(unsigned int address)
 {
-	struct atag_header *atags = (struct atag_header *)address;
+	/* Use virtual mapped physical memory to access the ATAGs */
+	struct atag_header *atags = (struct atag_header *) mem_p2v(address);
 	unsigned int tag;
 
 	console_write(COLOUR_PUSH BG_GREEN BG_HALF "Reading ATAGs\n\n" COLOUR_POP);
