@@ -51,13 +51,19 @@ Code overview
 
 The kernel is loaded into memory at 0x8000 and starts running from that
 location, at _start in start.s, which sets up a stack, turns on unaligned
-memory accesses (it makes the memory routines simpler) and calls main().
+memory accesses (it makes the memory routines simpler) and calls initsys().
 
-main() initialises the led (GPIO16) and framebuffer. If the framebuffer
-initialisation fails for any reason, an error code is flashed on the LED in
-a permanent loop (long pause, 2 short flashes in quick succession, then 8
-bits. Short flash = 0, long flash = 1. Least significant bit first. See
-framebuffer.c for the meaning of the errors).
+initsys() sets up the memory management unit (MMU) and remaps the kernel to
+0xf0000000, its data to 0xc0000000, and maps the physical memory and
+peripherals to 0x80000000. It then jumps to main() at its new address.
+
+main() further initialises memory, along with the led (GPIO16) and
+framebuffer.
+
+If the framebuffer initialisation fails for any reason, an error code is
+flashed on the LED in a permanent loop (long pause, 2 short flashes in quick
+succession, then 8 bits. Short flash = 0, long flash = 1. Least significant
+bit first. See framebuffer.c for the meaning of the errors).
 
 The framebuffer is initialised using tag mailbox calls to VideoCore. First,
 a call is made to read the physical framebuffer size, then a call is made to
@@ -96,15 +102,15 @@ config.txt), but doing so will change the kernel's load address, and it will
 no longer work.
 
 Next, the kernel uses the tag mailbox to get various bits of data from
-Videocore to display on the screen.
+Videocore to display on the screen, along with displaying the kernel code
+and data addresses.
 
-The kernel then sets up interrupt vectors and enables the ARM timer
-interrupt. This interrupt is used to flash the OK LED. It also enables the
-MMU, which is configured to map every virtual address to its corresponding
-physical address, except 0x00100000-0x001ffff and 0x00200000-0x002fffff,
-which are swapped over, and 0x02000000-0x03ffffff, which are unmapped. This
-is then tested with some reads/writes to the affected areas, and an attempt
-to jump to 0x02100000, which resuts in a prefetch abort.
+The kernel sets up interrupt vectors and enables the ARM timer
+interrupt. This interrupt is used to flash the OK LED.
+
+The kernel checks that it can't write to its own code area, before
+attempting to jump to 0x02100000, which resuts in a prefetch abort. Finally,
+in the prefetch abort routine, the kernel enters an infinite sleep loop.
 
 Files overview:
 	* Makefile		Controls the build process
@@ -112,7 +118,9 @@ Files overview:
 				code appears in the final kernel, and what
 				address it should expect to be loaded
 	* start.s		Assembly code to handle kernel entry point,
-				set up a stack and jump to main().
+				set up a stack and jump to initsys()
+	* initsys.c		Set up MMU, remap kernel addresses and jump
+				to main()
 	* barrier.h		Contains asm macros for data memory/sync
 				barriers, and full cache flush
 	* main.c		Contains main() and tag mailbox examples
@@ -130,6 +138,4 @@ Files overview:
 				zero, the function will call raise(), which
 				is defined in this file
 	* interrupts.c		Interrupt handling routines
-	* intvec.s		Interrupt vector code which is copied to
-				0x00000000
 	* memory.c		Memory management
